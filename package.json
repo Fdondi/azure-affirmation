@@ -10,11 +10,14 @@
     "test": "echo \"No tests yet\""
   },
   "main": "dist/src/app.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "dependencies": {
     "@azure/functions": "^4.0.0"
   },
   "devDependencies": {
-    "@types/node": "^18.x",
+    "@types/node": "^20.x",
     "azure-functions-core-tools": "^4.x",
     "typescript": "^4.0.0"
   }
