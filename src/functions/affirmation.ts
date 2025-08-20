@@ -1,6 +1,15 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
 import { MongoClient } from "mongodb";
 
+// Validate required environment variables
+function getEnvVar(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return value;
+}
+
 export async function testDate(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
     context.log('HTTP trigger function processed a request.');
 
@@ -29,8 +38,17 @@ app.http('testDate', {
 });
 
 
+function tryGetEnvVar(name: string): string | null {
+    const value = process.env[name];
+    if (!value) return null;
+    return value;
+}
 
-const client = new MongoClient(process.env.MONGODB_URI!);
+const mongoUri = tryGetEnvVar('MONGODB_URI');
+if (!mongoUri) {
+    throw new Error('Missing required environment variable: MONGODB_URI');
+}
+const client = new MongoClient(mongoUri);
 let connected: Promise<void> | null = null;
 async function ensureConn() {
   if (!connected) connected = client.connect().then(() => undefined);
@@ -38,13 +56,22 @@ async function ensureConn() {
 }
 
 export async function getRandomLine(req: HttpRequest, ctx: InvocationContext): Promise<HttpResponseInit> {
-  try {
-    await ensureConn();
-    const db = client.db(process.env.DB_NAME);
-    const col = db.collection(process.env.COLLECTION_NAME);
 
+    const dbName = tryGetEnvVar('DB_NAME');
+    const collectionName = tryGetEnvVar('COLLECTION_NAME');
+
+    if (!dbName || !collectionName) {
+        return { status: 500, jsonBody: { error: "Missing required environment variables", "db": dbName, "collection": collectionName, "uri": mongoUri } };
+    }
+
+    const db = client.db(dbName);
+    const col = db.collection(collectionName);
+
+    try {
+    await ensureConn();
+    
     const [doc] = await col.aggregate([{ $sample: { size: 1 } }]).toArray();
-    if (!doc) return { status: 404, jsonBody: { error: "No lines found" } };
+    if (!doc) return { status: 404, jsonBody: { error: "No lines found", "db": dbName, "collection": collectionName, "uri": mongoUri } };
 
     return { 
       status: 200, 
@@ -57,12 +84,17 @@ export async function getRandomLine(req: HttpRequest, ctx: InvocationContext): P
       jsonBody: { line: doc.text, id: doc._id } 
     };
   } catch (error) {
-    ctx.error('Error fetching random affirmation:', error);
+    ctx.error('Error fetching random affirmation:', error, "data", {
+      "db": dbName,
+      "collection": collectionName,
+      "uri": mongoUri,
+      "error": error
+    });
     return { 
       status: 500, 
-      jsonBody: { error: "Internal server error" } 
+      jsonBody: { error: "Internal server error: " + error, "db": dbName, "collection": collectionName, "uri": mongoUri } 
     };
   }
 }
 
-app.http("getRandomLine", { methods: ["GET", "POST"], authLevel: "function", handler: getRandomLine });
+app.http("getRandomLine", { methods: ["GET", "POST"], authLevel: "anonymous", handler: getRandomLine });
