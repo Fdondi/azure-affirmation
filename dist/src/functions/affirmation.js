@@ -72,10 +72,10 @@ function getRandomLine(req, ctx) {
         if (!dbName || !collectionName) {
             return { status: 500, jsonBody: { error: "Missing required environment variables", "db": dbName, "collection": collectionName, "uri": mongoUri } };
         }
-        const db = client.db(dbName);
-        const col = db.collection(collectionName);
         try {
             yield ensureConn();
+            const db = client.db(dbName);
+            const col = db.collection(collectionName);
             const [doc] = yield col.aggregate([{ $sample: { size: 1 } }]).toArray();
             if (!doc)
                 return { status: 404, jsonBody: { error: "No lines found", "db": dbName, "collection": collectionName, "uri": mongoUri } };
