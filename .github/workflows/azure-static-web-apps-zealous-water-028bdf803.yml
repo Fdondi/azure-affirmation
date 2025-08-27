@@ -29,7 +29,7 @@ jobs:
           ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
           # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
           app_location: "client" # App source code path
-          api_location: "src/functions" # Api source code path - functions directory
+          api_location: "" # No API - using external Function App (Free tier limitation)
           output_location: "build" # Built app content directory - optional
           app_build_command: "npm run build" # Build command for React app
           ###### End of Repository/Build Configurations ######

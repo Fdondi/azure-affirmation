@@ -11,7 +11,7 @@ function App() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
 
-  // Configuration - Use external Function App for now (debugging Static Web Apps integration)
+  // Configuration - Use external Function App (Free Static Web Apps tier doesn't support co-located functions)
   const AZURE_FUNCTION_URL = window.location.hostname === 'localhost' 
     ? 'http://localhost:7071/api/getRandomLine'  // Local development
     : 'https://affirmations.azurewebsites.net/api/getRandomLine';  // Production (external Function App)
