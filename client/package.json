@@ -40,5 +40,10 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "resolutions": {
+    "rimraf": "^5.0.0",
+    "glob": "^10.0.0",
+    "svgo": "^3.0.0"
   }
 }
