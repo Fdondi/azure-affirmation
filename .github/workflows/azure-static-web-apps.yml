@@ -29,9 +29,9 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
           # App location - where your React app source files are located
-          app_location: "/client"
+          app_location: "client"
           # API location - where your Azure Functions are located
-          api_location: "/src/functions"
+          api_location: "src/functions"
           # Output location - where the built React files will be located
           output_location: "build"
           # App build command - build the React app
