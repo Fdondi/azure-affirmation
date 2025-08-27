@@ -14,7 +14,7 @@ function App() {
   // Configuration - Use external Function App (Free Static Web Apps tier doesn't support co-located functions)
   const AZURE_FUNCTION_URL = window.location.hostname === 'localhost' 
     ? 'http://localhost:7071/api/getRandomLine'  // Local development
-    : 'https://affirmations.azurewebsites.net/api/getRandomLine';  // Production (external Function App)
+    : 'https://affirmations-flex-ckbsdqhwhqcbd4gb.northeurope-01.azurewebsites.net/api/getRandomLine';  // Production (external Function App)
 
   const getAffirmation = async () => {
     setIsLoading(true);
