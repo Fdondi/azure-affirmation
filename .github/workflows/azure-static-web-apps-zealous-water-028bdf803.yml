@@ -32,7 +32,6 @@ jobs:
           api_location: "src/functions" # Api source code path - functions directory
           output_location: "build" # Built app content directory - optional
           app_build_command: "npm run build" # Build command for React app
-          #api_build_command: "npm run build" # Azure SWA will auto-detect Node.js Functions
           ###### End of Repository/Build Configurations ######
 
   close_pull_request_job:

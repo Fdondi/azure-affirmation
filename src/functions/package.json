@@ -1,0 +1,17 @@
+{
+  "name": "azure-affirmation-functions",
+  "version": "1.0.0",
+  "description": "Azure Functions for affirmation API",
+  "main": "index.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.0.0",
+    "mongodb": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.x",
+    "typescript": "^5.0.0"
+  }
+}
