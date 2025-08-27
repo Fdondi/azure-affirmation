@@ -10,7 +10,6 @@ function App() {
   const [affirmation, setAffirmation] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  const [_, setIsFirstLoad] = useState<boolean>(true);
 
   // Configuration - Use external Function App for now (debugging Static Web Apps integration)
   const AZURE_FUNCTION_URL = window.location.hostname === 'localhost' 
@@ -20,7 +19,6 @@ function App() {
   const getAffirmation = async () => {
     setIsLoading(true);
     setError('');
-    setIsFirstLoad(false);
 
     try {
       // Add a small delay to show loading animation
