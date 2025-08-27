@@ -12,10 +12,10 @@ function App() {
   const [error, setError] = useState<string>('');
   const [isFirstLoad, setIsFirstLoad] = useState<boolean>(true);
 
-  // Configuration - Azure Static Web Apps automatically maps /api/* to your functions
+  // Configuration - Use your deployed Azure Function App
   const AZURE_FUNCTION_URL = window.location.hostname === 'localhost' 
     ? 'http://localhost:7071/api/getRandomLine'  // Local development
-    : '/api/getRandomLine';  // Production (Azure Static Web Apps)
+    : 'https://affirmations.azurewebsites.net/api/getRandomLine';  // Production (your Function App)
 
   const getAffirmation = async () => {
     setIsLoading(true);
