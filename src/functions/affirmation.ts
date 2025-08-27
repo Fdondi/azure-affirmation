@@ -1,7 +1,8 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
+import { randomInt } from "crypto";
 import { MongoClient } from "mongodb";
 
-const VERSION = "1.0.0";
+const VERSION = "1.0.1";
 
 // Validate required environment variables
 function getEnvVar(name: string): string {
@@ -64,7 +65,7 @@ export async function getRandomLine(req: HttpRequest, ctx: InvocationContext): P
     const collectionName = tryGetEnvVar('COLLECTION_NAME');
 
     if (!dbName || !collectionName) {
-        return { status: 500, jsonBody: { error: "Missing required environment variables", "db": dbName, "collection": collectionName, "uri": mongoUri, "version": VERSION } };
+        return { status: 500, jsonBody: { error: "Missing required environment variables", "db": dbName, "collection": collectionName, "version": VERSION } };
     }
 
     try {
@@ -72,9 +73,11 @@ export async function getRandomLine(req: HttpRequest, ctx: InvocationContext): P
     
     const db = client.db(dbName);
     const col = db.collection(collectionName);
-    const [doc] = await col.aggregate([{ $sample: { size: 1 } }]).toArray();
+    const n = await col.estimatedDocumentCount();
+    const k = randomInt(0, n);
+    const [doc] = await col.aggregate([{ $skip: k }, { $limit: 1 }]).toArray();
 
-    if (!doc) return { status: 404, jsonBody: { error: "No lines found", "db": dbName, "collection": collectionName, "uri": mongoUri, "version": VERSION } };
+    if (!doc) return { status: 404, jsonBody: { error: "No lines found", "db": dbName, "collection": collectionName, "version": VERSION } };
 
     return { 
       status: 200, 
@@ -84,7 +87,7 @@ export async function getRandomLine(req: HttpRequest, ctx: InvocationContext): P
         "Access-Control-Allow-Methods": "GET, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type"
       },
-      jsonBody: { line: doc.text, id: doc._id, version: VERSION } 
+      jsonBody: { line: doc.text, version: VERSION } 
     };
   } catch (error) {
     ctx.error('Error fetching random affirmation:', error, "data", {
@@ -95,7 +98,7 @@ export async function getRandomLine(req: HttpRequest, ctx: InvocationContext): P
     });
     return { 
       status: 500, 
-      jsonBody: { error: "Internal server error: " + error, "db": dbName, "collection": collectionName, "uri": mongoUri, "version": VERSION }
+      jsonBody: { error: "Internal server error: " + error, "db": dbName, "collection": collectionName, "version": VERSION }
     };
   }
 }

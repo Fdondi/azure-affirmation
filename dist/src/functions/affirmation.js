@@ -12,7 +12,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.testDate = testDate;
 exports.getRandomLine = getRandomLine;
 const functions_1 = require("@azure/functions");
+const crypto_1 = require("crypto");
 const mongodb_1 = require("mongodb");
+const VERSION = "1.0.1";
 // Validate required environment variables
 function getEnvVar(name) {
     const value = process.env[name];
@@ -27,7 +29,8 @@ function testDate(request, context) {
         // For now, always return "Ok" as requested
         const responseMessage = {
             message: "Ok",
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            version: VERSION
         };
         return {
             status: 200,
@@ -70,15 +73,17 @@ function getRandomLine(req, ctx) {
         const dbName = tryGetEnvVar('DB_NAME');
         const collectionName = tryGetEnvVar('COLLECTION_NAME');
         if (!dbName || !collectionName) {
-            return { status: 500, jsonBody: { error: "Missing required environment variables", "db": dbName, "collection": collectionName, "uri": mongoUri } };
+            return { status: 500, jsonBody: { error: "Missing required environment variables", "db": dbName, "collection": collectionName, "version": VERSION } };
         }
         try {
             yield ensureConn();
             const db = client.db(dbName);
             const col = db.collection(collectionName);
-            const [doc] = yield col.aggregate([{ $sample: { size: 1 } }]).toArray();
+            const n = yield col.estimatedDocumentCount();
+            const k = (0, crypto_1.randomInt)(0, n);
+            const [doc] = yield col.aggregate([{ $skip: k }, { $limit: 1 }]).toArray();
             if (!doc)
-                return { status: 404, jsonBody: { error: "No lines found", "db": dbName, "collection": collectionName, "uri": mongoUri } };
+                return { status: 404, jsonBody: { error: "No lines found", "db": dbName, "collection": collectionName, "version": VERSION } };
             return {
                 status: 200,
                 headers: {
@@ -87,7 +92,7 @@ function getRandomLine(req, ctx) {
                     "Access-Control-Allow-Methods": "GET, OPTIONS",
                     "Access-Control-Allow-Headers": "Content-Type"
                 },
-                jsonBody: { line: doc.text, id: doc._id }
+                jsonBody: { line: doc.text, version: VERSION }
             };
         }
         catch (error) {
@@ -99,7 +104,7 @@ function getRandomLine(req, ctx) {
             });
             return {
                 status: 500,
-                jsonBody: { error: "Internal server error: " + error, "db": dbName, "collection": collectionName, "uri": mongoUri }
+                jsonBody: { error: "Internal server error: " + error, "db": dbName, "collection": collectionName, "version": VERSION }
             };
         }
     });
