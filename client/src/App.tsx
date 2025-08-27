@@ -12,10 +12,10 @@ function App() {
   const [error, setError] = useState<string>('');
   const [isFirstLoad, setIsFirstLoad] = useState<boolean>(true);
 
-  // Configuration - Azure Static Web Apps automatically maps /api/* to your functions
+  // Configuration - Use external Function App for now (debugging Static Web Apps integration)
   const AZURE_FUNCTION_URL = window.location.hostname === 'localhost' 
     ? 'http://localhost:7071/api/getRandomLine'  // Local development
-    : '/api/getRandomLine';  // Production (Azure Static Web Apps integrated API)
+    : 'https://affirmations.azurewebsites.net/api/getRandomLine';  // Production (external Function App)
 
   const getAffirmation = async () => {
     setIsLoading(true);
@@ -72,12 +72,10 @@ function App() {
         <h1>Daily Affirmations</h1>
         
         <div className="affirmation-display">
-          <div className={`affirmation-text ${affirmation || !isFirstLoad ? 'show' : ''} ${isFirstLoad ? 'placeholder-text' : ''}`}>
-            {isFirstLoad 
-              ? 'Click the button below to get your daily affirmation ✨'
-              : affirmation 
-                ? `"${affirmation}"`
-                : 'Click the button below to get your daily affirmation ✨'
+          <div className={`affirmation-text show ${!affirmation ? 'placeholder-text' : ''}`}>
+            {affirmation 
+              ? `"${affirmation}"`
+              : 'Click the button below to get your daily affirmation ✨'
             }
           </div>
         </div>
