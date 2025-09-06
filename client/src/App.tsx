@@ -80,8 +80,8 @@ function App() {
               authData.clientPrincipal.userDetails && 
               authData.clientPrincipal.userRoles && 
               authData.clientPrincipal.userRoles.includes('authenticated')) {
-            // Encode the user info to send to external function
-            authToken = Buffer.from(JSON.stringify(authData.clientPrincipal)).toString('base64');
+            // Encode the user info to send to external function (browser-safe)
+            authToken = btoa(JSON.stringify(authData.clientPrincipal));
             console.log('Generated auth token:', authToken);
             console.log('Auth token length:', authToken.length);
           } else {

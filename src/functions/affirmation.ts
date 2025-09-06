@@ -72,18 +72,17 @@ export async function getRandomLine(req: HttpRequest, ctx: InvocationContext): P
         };
     }
 
-    // Log all headers for debugging
+    // Log request basics for debugging
     ctx.log('Request method:', req.method);
-    ctx.log('Request headers:', JSON.stringify(req.headers, null, 2));
     ctx.log('Request URL:', req.url);
     
     // Check authentication - try both Azure Static Web Apps header and custom header
-    let clientPrincipal = req.headers['x-ms-client-principal'];
+    let clientPrincipal = (req.headers as any).get ? (req.headers as any).get('x-ms-client-principal') : (req.headers as any)['x-ms-client-principal'];
     let user = null;
     
     // If no Azure Static Web Apps header, try custom header from frontend
     if (!clientPrincipal) {
-        const userToken = req.headers['x-user-token'];
+        const userToken = (req.headers as any).get ? (req.headers as any).get('x-user-token') : (req.headers as any)['x-user-token'];
         if (userToken) {
             try {
                 const decoded = Buffer.from(userToken, 'base64').toString();
@@ -114,33 +113,8 @@ export async function getRandomLine(req: HttpRequest, ctx: InvocationContext): P
     
     if (!user) {
         ctx.log('No valid authentication found');
-        ctx.log('Available headers:', Object.keys(req.headers));
-        ctx.log('Looking for x-user-token:', req.headers['x-user-token']);
-        ctx.log('Looking for x-ms-client-principal:', req.headers['x-ms-client-principal']);
-        
-        // TEMPORARY: For testing, let's bypass authentication and just return a test response
-        // TODO: Remove this after authentication is working
-        ctx.log('TEMPORARY: Bypassing authentication for testing');
-        return {
-            status: 200,
-            headers: {
-                "Content-Type": "application/json",
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "GET, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type, Authorization, X-User-Token"
-            },
-            jsonBody: { 
-                line: "This is a test affirmation - authentication bypassed for testing", 
-                version: VERSION,
-                debug: "Authentication bypassed - this is temporary",
-                headers: Object.keys(req.headers),
-                xUserToken: req.headers['x-user-token'] ? 'present' : 'missing',
-                xMsClientPrincipal: req.headers['x-ms-client-principal'] ? 'present' : 'missing'
-            }
-        };
-        
-        // Original authentication check (commented out for testing)
-        /*
+        const xUserToken = (req.headers as any).get ? (req.headers as any).get('x-user-token') : (req.headers as any)['x-user-token'];
+        const xMsClient = (req.headers as any).get ? (req.headers as any).get('x-ms-client-principal') : (req.headers as any)['x-ms-client-principal'];
         return {
             status: 401,
             headers: {
@@ -153,12 +127,10 @@ export async function getRandomLine(req: HttpRequest, ctx: InvocationContext): P
                 error: "Unauthorized - Please log in", 
                 version: VERSION,
                 debug: "No valid authentication found",
-                headers: Object.keys(req.headers),
-                xUserToken: req.headers['x-user-token'] ? 'present' : 'missing',
-                xMsClientPrincipal: req.headers['x-ms-client-principal'] ? 'present' : 'missing'
+                xUserToken: xUserToken ? 'present' : 'missing',
+                xMsClientPrincipal: xMsClient ? 'present' : 'missing'
             }
         };
-        */
     }
 
     const dbName = tryGetEnvVar('DB_NAME');
