@@ -1,4 +1,5 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
+import { VERSION } from "./shared/version";
 
 export async function testFunction(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
     context.log('Test function processed a request.');
@@ -13,7 +14,8 @@ export async function testFunction(request: HttpRequest, context: InvocationCont
         },
         jsonBody: { 
             message: "Hello from Static Web Apps integrated function!",
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            version: VERSION
         }
     };
 }

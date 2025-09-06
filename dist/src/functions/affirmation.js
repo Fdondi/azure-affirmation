@@ -14,7 +14,7 @@ exports.getRandomLine = getRandomLine;
 const functions_1 = require("@azure/functions");
 const crypto_1 = require("crypto");
 const mongodb_1 = require("mongodb");
-const VERSION = "1.0.1";
+const version_1 = require("./shared/version");
 // Validate required environment variables
 function getEnvVar(name) {
     const value = process.env[name];
@@ -30,7 +30,7 @@ function testDate(request, context) {
         const responseMessage = {
             message: "Ok",
             timestamp: new Date().toISOString(),
-            version: VERSION
+            version: version_1.VERSION
         };
         return {
             status: 200,
@@ -70,10 +70,47 @@ function ensureConn() {
 }
 function getRandomLine(req, ctx) {
     return __awaiter(this, void 0, void 0, function* () {
+        // Check authentication - Azure Static Web Apps injects user info in headers
+        const clientPrincipal = req.headers['x-ms-client-principal'];
+        if (!clientPrincipal) {
+            return {
+                status: 401,
+                headers: {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "GET, OPTIONS",
+                    "Access-Control-Allow-Headers": "Content-Type"
+                },
+                jsonBody: { error: "Unauthorized - Please log in", version: version_1.VERSION }
+            };
+        }
+        // Decode the base64 encoded client principal
+        let user;
+        try {
+            const decoded = Buffer.from(clientPrincipal, 'base64').toString();
+            user = JSON.parse(decoded);
+            ctx.log('Authenticated user:', user.userDetails);
+        }
+        catch (error) {
+            ctx.log('Error parsing client principal:', error);
+            return {
+                status: 401,
+                headers: {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "GET, OPTIONS",
+                    "Access-Control-Allow-Headers": "Content-Type"
+                },
+                jsonBody: { error: "Invalid authentication", version: version_1.VERSION }
+            };
+        }
         const dbName = tryGetEnvVar('DB_NAME');
         const collectionName = tryGetEnvVar('COLLECTION_NAME');
         if (!dbName || !collectionName) {
-            return { status: 500, jsonBody: { error: "Missing required environment variables", "db": dbName, "collection": collectionName, "version": VERSION } };
+            return {
+                status: 500,
+                jsonBody: { error: "Missing required environment variables", "db": dbName, "collection": collectionName, "version": version_1.VERSION }
+            };
         }
         try {
             yield ensureConn();
@@ -82,8 +119,12 @@ function getRandomLine(req, ctx) {
             const n = yield col.estimatedDocumentCount();
             const k = (0, crypto_1.randomInt)(0, n);
             const [doc] = yield col.aggregate([{ $skip: k }, { $limit: 1 }]).toArray();
-            if (!doc)
-                return { status: 404, jsonBody: { error: "No lines found", "db": dbName, "collection": collectionName, "version": VERSION } };
+            if (!doc) {
+                return {
+                    status: 404,
+                    jsonBody: { error: "No lines found", "db": dbName, "collection": collectionName, "version": version_1.VERSION }
+                };
+            }
             return {
                 status: 200,
                 headers: {
@@ -92,7 +133,7 @@ function getRandomLine(req, ctx) {
                     "Access-Control-Allow-Methods": "GET, OPTIONS",
                     "Access-Control-Allow-Headers": "Content-Type"
                 },
-                jsonBody: { line: doc.text, version: VERSION }
+                jsonBody: { line: doc.text, version: version_1.VERSION }
             };
         }
         catch (error) {
@@ -104,7 +145,7 @@ function getRandomLine(req, ctx) {
             });
             return {
                 status: 500,
-                jsonBody: { error: "Internal server error: " + error, "db": dbName, "collection": collectionName, "version": VERSION }
+                jsonBody: { error: "Internal server error: " + error, "db": dbName, "collection": collectionName, "version": version_1.VERSION }
             };
         }
     });
