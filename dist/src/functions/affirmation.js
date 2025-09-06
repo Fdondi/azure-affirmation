@@ -70,38 +70,52 @@ function ensureConn() {
 }
 function getRandomLine(req, ctx) {
     return __awaiter(this, void 0, void 0, function* () {
-        // Check authentication - Azure Static Web Apps injects user info in headers
-        const clientPrincipal = req.headers['x-ms-client-principal'];
+        // Log all headers for debugging
+        ctx.log('Request headers:', JSON.stringify(req.headers, null, 2));
+        // Check authentication - try both Azure Static Web Apps header and custom header
+        let clientPrincipal = req.headers['x-ms-client-principal'];
+        let user = null;
+        // If no Azure Static Web Apps header, try custom header from frontend
         if (!clientPrincipal) {
+            const userToken = req.headers['x-user-token'];
+            if (userToken) {
+                try {
+                    const decoded = Buffer.from(userToken, 'base64').toString();
+                    user = JSON.parse(decoded);
+                    ctx.log('Authenticated user from custom header:', user.userDetails);
+                }
+                catch (error) {
+                    ctx.log('Error parsing custom user token:', error);
+                }
+            }
+        }
+        else {
+            // Decode the base64 encoded client principal from Azure Static Web Apps
+            try {
+                const decoded = Buffer.from(clientPrincipal, 'base64').toString();
+                user = JSON.parse(decoded);
+                ctx.log('Authenticated user from Azure header:', user.userDetails);
+            }
+            catch (error) {
+                ctx.log('Error parsing client principal:', error);
+            }
+        }
+        if (!user) {
+            ctx.log('No valid authentication found');
             return {
                 status: 401,
                 headers: {
                     "Content-Type": "application/json",
                     "Access-Control-Allow-Origin": "*",
                     "Access-Control-Allow-Methods": "GET, OPTIONS",
-                    "Access-Control-Allow-Headers": "Content-Type"
+                    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-User-Token"
                 },
-                jsonBody: { error: "Unauthorized - Please log in", version: version_1.VERSION }
-            };
-        }
-        // Decode the base64 encoded client principal
-        let user;
-        try {
-            const decoded = Buffer.from(clientPrincipal, 'base64').toString();
-            user = JSON.parse(decoded);
-            ctx.log('Authenticated user:', user.userDetails);
-        }
-        catch (error) {
-            ctx.log('Error parsing client principal:', error);
-            return {
-                status: 401,
-                headers: {
-                    "Content-Type": "application/json",
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow-Methods": "GET, OPTIONS",
-                    "Access-Control-Allow-Headers": "Content-Type"
-                },
-                jsonBody: { error: "Invalid authentication", version: version_1.VERSION }
+                jsonBody: {
+                    error: "Unauthorized - Please log in",
+                    version: version_1.VERSION,
+                    debug: "No valid authentication found",
+                    headers: Object.keys(req.headers)
+                }
             };
         }
         const dbName = tryGetEnvVar('DB_NAME');

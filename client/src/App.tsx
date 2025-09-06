@@ -62,11 +62,43 @@ function App() {
       // Add a small delay to show loading animation
       await new Promise(resolve => setTimeout(resolve, 300));
 
+      // Get the authentication token from Static Web Apps
+      let authToken = null;
+      
+      try {
+        const authResponse = await fetch('/.auth/me');
+        console.log('Auth response status:', authResponse.status);
+        
+        if (authResponse.ok) {
+          const authData = await authResponse.json();
+          console.log('Auth data:', authData);
+          
+          // The auth data structure is different - it's the user info directly
+          if (authData.userDetails && authData.userRoles && authData.userRoles.includes('authenticated')) {
+            // Encode the user info to send to external function
+            authToken = Buffer.from(JSON.stringify(authData)).toString('base64');
+            console.log('Generated auth token:', authToken);
+          } else {
+            console.log('User not authenticated or missing required fields');
+          }
+        } else {
+          console.log('Auth response not ok:', authResponse.status, authResponse.statusText);
+        }
+      } catch (authError) {
+        console.error('Error fetching auth data:', authError);
+      }
+
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(authToken && { 'X-User-Token': authToken }),
+      };
+      
+      console.log('Request headers:', headers);
+      console.log('Request URL:', AZURE_FUNCTION_URL);
+
       const response = await fetch(AZURE_FUNCTION_URL, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: headers,
       });
 
       if (!response.ok) {

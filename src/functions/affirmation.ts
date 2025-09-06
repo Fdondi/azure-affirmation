@@ -59,39 +59,79 @@ async function ensureConn() {
 }
 
 export async function getRandomLine(req: HttpRequest, ctx: InvocationContext): Promise<HttpResponseInit> {
-    // Check authentication - Azure Static Web Apps injects user info in headers
-    const clientPrincipal = req.headers['x-ms-client-principal'];
-    
-    if (!clientPrincipal) {
+    // Handle CORS preflight requests
+    if (req.method === 'OPTIONS') {
         return {
-            status: 401,
+            status: 200,
             headers: {
-                "Content-Type": "application/json",
                 "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "GET, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type"
-            },
-            jsonBody: { error: "Unauthorized - Please log in", version: VERSION }
+                "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization, X-User-Token",
+                "Access-Control-Max-Age": "86400"
+            }
         };
     }
 
-    // Decode the base64 encoded client principal
-    let user;
-    try {
-        const decoded = Buffer.from(clientPrincipal, 'base64').toString();
-        user = JSON.parse(decoded);
-        ctx.log('Authenticated user:', user.userDetails);
-    } catch (error) {
-        ctx.log('Error parsing client principal:', error);
+    // Log all headers for debugging
+    ctx.log('Request method:', req.method);
+    ctx.log('Request headers:', JSON.stringify(req.headers, null, 2));
+    ctx.log('Request URL:', req.url);
+    
+    // Check authentication - try both Azure Static Web Apps header and custom header
+    let clientPrincipal = req.headers['x-ms-client-principal'];
+    let user = null;
+    
+    // If no Azure Static Web Apps header, try custom header from frontend
+    if (!clientPrincipal) {
+        const userToken = req.headers['x-user-token'];
+        if (userToken) {
+            try {
+                const decoded = Buffer.from(userToken, 'base64').toString();
+                user = JSON.parse(decoded);
+                ctx.log('Authenticated user from custom header:', user.userDetails);
+                
+                // Validate that the user is authenticated
+                if (!user.userDetails || !user.userRoles || !user.userRoles.includes('authenticated')) {
+                    ctx.log('User token invalid - not authenticated');
+                    user = null;
+                }
+            } catch (error) {
+                ctx.log('Error parsing custom user token:', error);
+            }
+        }
+    } else {
+        // Decode the base64 encoded client principal from Azure Static Web Apps
+        try {
+            const decoded = Buffer.from(clientPrincipal, 'base64').toString();
+            user = JSON.parse(decoded);
+            ctx.log('Authenticated user from Azure header:', user.userDetails);
+        } catch (error) {
+            ctx.log('Error parsing client principal:', error);
+        }
+    }
+    
+    if (!user) {
+        ctx.log('No valid authentication found');
+        ctx.log('Available headers:', Object.keys(req.headers));
+        ctx.log('Looking for x-user-token:', req.headers['x-user-token']);
+        ctx.log('Looking for x-ms-client-principal:', req.headers['x-ms-client-principal']);
+        
         return {
             status: 401,
             headers: {
                 "Content-Type": "application/json",
                 "Access-Control-Allow-Origin": "*",
                 "Access-Control-Allow-Methods": "GET, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type"
+                "Access-Control-Allow-Headers": "Content-Type, Authorization, X-User-Token"
             },
-            jsonBody: { error: "Invalid authentication", version: VERSION }
+            jsonBody: { 
+                error: "Unauthorized - Please log in", 
+                version: VERSION,
+                debug: "No valid authentication found",
+                headers: Object.keys(req.headers),
+                xUserToken: req.headers['x-user-token'] ? 'present' : 'missing',
+                xMsClientPrincipal: req.headers['x-ms-client-principal'] ? 'present' : 'missing'
+            }
         };
     }
 
@@ -145,4 +185,8 @@ export async function getRandomLine(req: HttpRequest, ctx: InvocationContext): P
     }
 }
 
-app.http("getRandomLine", { methods: ["GET", "POST"], authLevel: "anonymous", handler: getRandomLine });
+app.http("getRandomLine", { 
+    methods: ["GET", "POST", "OPTIONS"], 
+    authLevel: "anonymous", 
+    handler: getRandomLine 
+});
