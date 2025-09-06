@@ -70,8 +70,22 @@ function ensureConn() {
 }
 function getRandomLine(req, ctx) {
     return __awaiter(this, void 0, void 0, function* () {
+        // Handle CORS preflight requests
+        if (req.method === 'OPTIONS') {
+            return {
+                status: 200,
+                headers: {
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-User-Token",
+                    "Access-Control-Max-Age": "86400"
+                }
+            };
+        }
         // Log all headers for debugging
+        ctx.log('Request method:', req.method);
         ctx.log('Request headers:', JSON.stringify(req.headers, null, 2));
+        ctx.log('Request URL:', req.url);
         // Check authentication - try both Azure Static Web Apps header and custom header
         let clientPrincipal = req.headers['x-ms-client-principal'];
         let user = null;
@@ -83,6 +97,11 @@ function getRandomLine(req, ctx) {
                     const decoded = Buffer.from(userToken, 'base64').toString();
                     user = JSON.parse(decoded);
                     ctx.log('Authenticated user from custom header:', user.userDetails);
+                    // Validate that the user is authenticated
+                    if (!user.userDetails || !user.userRoles || !user.userRoles.includes('authenticated')) {
+                        ctx.log('User token invalid - not authenticated');
+                        user = null;
+                    }
                 }
                 catch (error) {
                     ctx.log('Error parsing custom user token:', error);
@@ -102,6 +121,9 @@ function getRandomLine(req, ctx) {
         }
         if (!user) {
             ctx.log('No valid authentication found');
+            ctx.log('Available headers:', Object.keys(req.headers));
+            ctx.log('Looking for x-user-token:', req.headers['x-user-token']);
+            ctx.log('Looking for x-ms-client-principal:', req.headers['x-ms-client-principal']);
             return {
                 status: 401,
                 headers: {
@@ -114,7 +136,9 @@ function getRandomLine(req, ctx) {
                     error: "Unauthorized - Please log in",
                     version: version_1.VERSION,
                     debug: "No valid authentication found",
-                    headers: Object.keys(req.headers)
+                    headers: Object.keys(req.headers),
+                    xUserToken: req.headers['x-user-token'] ? 'present' : 'missing',
+                    xMsClientPrincipal: req.headers['x-ms-client-principal'] ? 'present' : 'missing'
                 }
             };
         }
@@ -164,5 +188,9 @@ function getRandomLine(req, ctx) {
         }
     });
 }
-functions_1.app.http("getRandomLine", { methods: ["GET", "POST"], authLevel: "anonymous", handler: getRandomLine });
+functions_1.app.http("getRandomLine", {
+    methods: ["GET", "POST", "OPTIONS"],
+    authLevel: "anonymous",
+    handler: getRandomLine
+});
 //# sourceMappingURL=affirmation.js.map

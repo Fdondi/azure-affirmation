@@ -66,23 +66,36 @@ function App() {
       let authToken = null;
       
       try {
+        console.log('Fetching auth data from /.auth/me...');
         const authResponse = await fetch('/.auth/me');
         console.log('Auth response status:', authResponse.status);
+        console.log('Auth response headers:', Object.fromEntries(authResponse.headers.entries()));
         
         if (authResponse.ok) {
           const authData = await authResponse.json();
           console.log('Auth data:', authData);
           
-          // The auth data structure is different - it's the user info directly
-          if (authData.userDetails && authData.userRoles && authData.userRoles.includes('authenticated')) {
+          // The auth data structure has clientPrincipal nested inside
+          if (authData.clientPrincipal && 
+              authData.clientPrincipal.userDetails && 
+              authData.clientPrincipal.userRoles && 
+              authData.clientPrincipal.userRoles.includes('authenticated')) {
             // Encode the user info to send to external function
-            authToken = Buffer.from(JSON.stringify(authData)).toString('base64');
+            authToken = Buffer.from(JSON.stringify(authData.clientPrincipal)).toString('base64');
             console.log('Generated auth token:', authToken);
+            console.log('Auth token length:', authToken.length);
           } else {
             console.log('User not authenticated or missing required fields');
+            console.log('clientPrincipal:', authData.clientPrincipal);
+            if (authData.clientPrincipal) {
+              console.log('userDetails:', authData.clientPrincipal.userDetails);
+              console.log('userRoles:', authData.clientPrincipal.userRoles);
+            }
           }
         } else {
           console.log('Auth response not ok:', authResponse.status, authResponse.statusText);
+          const errorText = await authResponse.text();
+          console.log('Error response body:', errorText);
         }
       } catch (authError) {
         console.error('Error fetching auth data:', authError);
@@ -95,11 +108,21 @@ function App() {
       
       console.log('Request headers:', headers);
       console.log('Request URL:', AZURE_FUNCTION_URL);
+      console.log('Auth token present:', !!authToken);
+      console.log('Auth token value:', authToken);
 
+      // Test: Let's also try a simple test to see if we can make a request at all
+      console.log('Making request to external function...');
+      
       const response = await fetch(AZURE_FUNCTION_URL, {
         method: 'GET',
         headers: headers,
+        mode: 'cors',
+        credentials: 'include'
       });
+      
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

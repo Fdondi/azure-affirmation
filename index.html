@@ -355,13 +355,17 @@
                         const authData = await authResponse.json();
                         console.log('Auth data:', authData);
                         
-                        // The auth data structure is different - it's the user info directly
-                        if (authData.userDetails && authData.userRoles && authData.userRoles.includes('authenticated')) {
+                        // The auth data structure has clientPrincipal nested inside
+                        if (authData.clientPrincipal && 
+                            authData.clientPrincipal.userDetails && 
+                            authData.clientPrincipal.userRoles && 
+                            authData.clientPrincipal.userRoles.includes('authenticated')) {
                             // Encode the user info to send to external function
-                            authToken = btoa(JSON.stringify(authData));
+                            authToken = btoa(JSON.stringify(authData.clientPrincipal));
                             console.log('Generated auth token:', authToken);
                         } else {
                             console.log('User not authenticated or missing required fields');
+                            console.log('clientPrincipal:', authData.clientPrincipal);
                         }
                     }
                 } catch (authError) {
