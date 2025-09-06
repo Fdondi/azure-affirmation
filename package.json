@@ -7,8 +7,9 @@
     "watch": "tsc -w",
     "prestart": "npm run build",
     "start": "func start",
-    "test": "cd client && npm test -- --watchAll=false",
-    "test:client": "cd client && npm test -- --watchAll=false"
+    "test": "npm run test:client && npm run test:functions",
+    "test:client": "cd client && npm test -- --watchAll=false",
+    "test:functions": "jest --config jest.config.ts"
   },
   "main": "dist/src/app.js",
   "engines": {
@@ -19,8 +20,12 @@
     "mongodb": "^6.0.0"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/node": "^20.x",
     "azure-functions-core-tools": "^4.x",
+    "jest": "^30.1.3",
+    "ts-jest": "^29.4.1",
+    "ts-node": "^10.9.2",
     "typescript": "^5.0.0"
   }
 }

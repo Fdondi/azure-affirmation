@@ -1,0 +1,9 @@
+---
+description: Do not add temporary code
+globs:
+alwaysApply: true
+---
+
+Never add code "for now", for testing", "bypassing because it's hard".
+
+Always test everything that isn't working with local unit tests. Experiemnt there and only there. 

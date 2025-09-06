@@ -2,6 +2,7 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/fu
 import { randomInt } from "crypto";
 import { MongoClient } from "mongodb";
 import { VERSION } from "./shared/version";
+import { parseAuthenticatedUserFromHeaders, getAuthHeadersPresence } from "./shared/auth";
 
 // Validate required environment variables
 function getEnvVar(name: string): string {
@@ -76,45 +77,12 @@ export async function getRandomLine(req: HttpRequest, ctx: InvocationContext): P
     ctx.log('Request method:', req.method);
     ctx.log('Request URL:', req.url);
     
-    // Check authentication - try both Azure Static Web Apps header and custom header
-    let clientPrincipal = (req.headers as any).get ? (req.headers as any).get('x-ms-client-principal') : (req.headers as any)['x-ms-client-principal'];
-    let user = null;
-    
-    // If no Azure Static Web Apps header, try custom header from frontend
-    if (!clientPrincipal) {
-        const userToken = (req.headers as any).get ? (req.headers as any).get('x-user-token') : (req.headers as any)['x-user-token'];
-        if (userToken) {
-            try {
-                const decoded = Buffer.from(userToken, 'base64').toString();
-                user = JSON.parse(decoded);
-                ctx.log('Authenticated user from custom header:', user.userDetails);
-                
-                // Validate that the user is authenticated
-                if (!user.userDetails || !user.userRoles || !user.userRoles.includes('authenticated')) {
-                    ctx.log('User token invalid - not authenticated');
-                    ctx.log('User details:', user.userDetails);
-                    ctx.log('User roles:', user.userRoles);
-                    user = null;
-                }
-            } catch (error) {
-                ctx.log('Error parsing custom user token:', error);
-            }
-        }
-    } else {
-        // Decode the base64 encoded client principal from Azure Static Web Apps
-        try {
-            const decoded = Buffer.from(clientPrincipal, 'base64').toString();
-            user = JSON.parse(decoded);
-            ctx.log('Authenticated user from Azure header:', user.userDetails);
-        } catch (error) {
-            ctx.log('Error parsing client principal:', error);
-        }
-    }
+    // Parse user using shared helper
+    const user = parseAuthenticatedUserFromHeaders(req.headers as any, ctx);
     
     if (!user) {
         ctx.log('No valid authentication found');
-        const xUserToken = (req.headers as any).get ? (req.headers as any).get('x-user-token') : (req.headers as any)['x-user-token'];
-        const xMsClient = (req.headers as any).get ? (req.headers as any).get('x-ms-client-principal') : (req.headers as any)['x-ms-client-principal'];
+        const presence = getAuthHeadersPresence(req.headers as any);
         return {
             status: 401,
             headers: {
@@ -127,8 +95,8 @@ export async function getRandomLine(req: HttpRequest, ctx: InvocationContext): P
                 error: "Unauthorized - Please log in", 
                 version: VERSION,
                 debug: "No valid authentication found",
-                xUserToken: xUserToken ? 'present' : 'missing',
-                xMsClientPrincipal: xMsClient ? 'present' : 'missing'
+                xUserToken: presence.xUserToken ? 'present' : 'missing',
+                xMsClientPrincipal: presence.xMsClientPrincipal ? 'present' : 'missing'
             }
         };
     }
