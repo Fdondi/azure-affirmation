@@ -16,6 +16,7 @@ const crypto_1 = require("crypto");
 const mongodb_1 = require("mongodb");
 const version_1 = require("./shared/version");
 const auth_1 = require("./shared/auth");
+const cors_1 = require("./shared/cors");
 // Validate required environment variables
 function getEnvVar(name) {
     const value = process.env[name];
@@ -73,14 +74,10 @@ function getRandomLine(req, ctx) {
     return __awaiter(this, void 0, void 0, function* () {
         // Handle CORS preflight requests
         if (req.method === 'OPTIONS') {
+            const origin = req.headers.get ? req.headers.get('origin') : req.headers['origin'];
             return {
                 status: 200,
-                headers: {
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-                    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-User-Token",
-                    "Access-Control-Max-Age": "86400"
-                }
+                headers: (0, cors_1.buildCorsHeaders)(origin, true, ["Content-Type", "Authorization", "X-User-Token"])
             };
         }
         // Log request basics for debugging
@@ -91,14 +88,10 @@ function getRandomLine(req, ctx) {
         if (!user) {
             ctx.log('No valid authentication found');
             const presence = (0, auth_1.getAuthHeadersPresence)(req.headers);
+            const origin = req.headers.get ? req.headers.get('origin') : req.headers['origin'];
             return {
                 status: 401,
-                headers: {
-                    "Content-Type": "application/json",
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow-Methods": "GET, OPTIONS",
-                    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-User-Token"
-                },
+                headers: Object.assign({ "Content-Type": "application/json" }, (0, cors_1.buildCorsHeaders)(origin, true, ["Content-Type", "Authorization", "X-User-Token"])),
                 jsonBody: {
                     error: "Unauthorized - Please log in",
                     version: version_1.VERSION,
@@ -129,14 +122,10 @@ function getRandomLine(req, ctx) {
                     jsonBody: { error: "No lines found", "db": dbName, "collection": collectionName, "version": version_1.VERSION }
                 };
             }
+            const origin = req.headers.get ? req.headers.get('origin') : req.headers['origin'];
             return {
                 status: 200,
-                headers: {
-                    "Content-Type": "application/json",
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow-Methods": "GET, OPTIONS",
-                    "Access-Control-Allow-Headers": "Content-Type"
-                },
+                headers: Object.assign({ "Content-Type": "application/json" }, (0, cors_1.buildCorsHeaders)(origin, true, ["Content-Type", "Authorization", "X-User-Token"])),
                 jsonBody: { line: doc.text, version: version_1.VERSION }
             };
         }

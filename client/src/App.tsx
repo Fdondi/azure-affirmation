@@ -76,29 +76,42 @@ function App() {
           console.log('Auth data:', authData);
           
           // The auth data structure has clientPrincipal nested inside
-          if (authData.clientPrincipal && 
-              authData.clientPrincipal.userDetails && 
-              authData.clientPrincipal.userRoles && 
-              authData.clientPrincipal.userRoles.includes('authenticated')) {
+          
+          if (!authData.clientPrincipal){
+            console.log('No clientPrincipal found');
+          } else if (!authData.clientPrincipal.userDetails) {
+            console.log('No userDetails found');
+          } else if (!authData.clientPrincipal.userRoles) {
+            console.log('No userRoles found');
+          } else if (!authData.clientPrincipal.userRoles.includes('authenticated')) {
+            console.log('User not authenticated');
+          } else {
             // Encode the user info to send to external function (browser-safe)
             authToken = btoa(JSON.stringify(authData.clientPrincipal));
             console.log('Generated auth token:', authToken);
             console.log('Auth token length:', authToken.length);
-          } else {
-            console.log('User not authenticated or missing required fields');
-            console.log('clientPrincipal:', authData.clientPrincipal);
-            if (authData.clientPrincipal) {
-              console.log('userDetails:', authData.clientPrincipal.userDetails);
-              console.log('userRoles:', authData.clientPrincipal.userRoles);
-            }
+            
+            // Update UI state to match current auth status
+            setUser(authData.clientPrincipal);
+          } 
+          if (!authToken) {
+            console.log('Auth failed');
+            // Clear user state when auth fails
+            setUser(null);
           }
         } else {
           console.log('Auth response not ok:', authResponse.status, authResponse.statusText);
           const errorText = await authResponse.text();
           console.log('Error response body:', errorText);
+          
+          // Clear user state when auth request fails
+          setUser(null);
         }
       } catch (authError) {
         console.error('Error fetching auth data:', authError);
+        
+        // Clear user state when auth check throws
+        setUser(null);
       }
 
       const headers = {

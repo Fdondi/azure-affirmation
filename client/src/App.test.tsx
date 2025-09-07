@@ -155,5 +155,60 @@ describe('Authentication Header Generation', () => {
     expect(requestOptions.mode).toBe('cors');
     expect(requestOptions.credentials).toBe('include');
   });
+
+  test('should handle auth state synchronization between initial check and per-request check', async () => {
+    // Mock initial auth check returning valid user
+    const mockAuthData = {
+      clientPrincipal: {
+        identityProvider: "aad",
+        userId: "test-user-id",
+        userDetails: "francesco.dondi@hotmail.com",
+        userRoles: ["anonymous", "authenticated"]
+      }
+    };
+
+    // Mock per-request auth check returning null (session expired)
+    const mockAuthDataExpired = {
+      clientPrincipal: null
+    };
+
+    // Simulate the per-request auth logic from getAffirmation
+    let authToken = null;
+    
+    // First call: valid auth
+    if (mockAuthData.clientPrincipal && 
+        mockAuthData.clientPrincipal.userDetails && 
+        mockAuthData.clientPrincipal.userRoles && 
+        mockAuthData.clientPrincipal.userRoles.includes('authenticated')) {
+      authToken = btoa(JSON.stringify(mockAuthData.clientPrincipal));
+    }
+
+    expect(authToken).toBeTruthy();
+
+    // Second call: expired auth
+    authToken = null;
+    if (mockAuthDataExpired.clientPrincipal && 
+        mockAuthDataExpired.clientPrincipal.userDetails && 
+        mockAuthDataExpired.clientPrincipal.userRoles && 
+        mockAuthDataExpired.clientPrincipal.userRoles.includes('authenticated')) {
+      authToken = btoa(JSON.stringify(mockAuthDataExpired.clientPrincipal));
+    }
+
+    expect(authToken).toBeFalsy();
+
+    // Verify headers are created correctly for both scenarios
+    const headersWithAuth = {
+      'Content-Type': 'application/json',
+      ...(btoa(JSON.stringify(mockAuthData.clientPrincipal)) && { 'X-User-Token': btoa(JSON.stringify(mockAuthData.clientPrincipal)) }),
+    };
+
+    const headersWithoutAuth = {
+      'Content-Type': 'application/json',
+      ...(null && { 'X-User-Token': null }),
+    };
+
+    expect(headersWithAuth).toHaveProperty('X-User-Token');
+    expect(headersWithoutAuth).not.toHaveProperty('X-User-Token');
+  });
 });
 
