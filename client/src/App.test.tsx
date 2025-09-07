@@ -1,6 +1,4 @@
-import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import App from './App';
+import { isAuthValid } from './App';
 
 // Mock fetch globally
 global.fetch = jest.fn();
@@ -44,10 +42,7 @@ describe('Authentication Header Generation', () => {
     };
 
     // Test the validation logic
-    const isValid = validAuthData.clientPrincipal && 
-                   validAuthData.clientPrincipal.userDetails && 
-                   validAuthData.clientPrincipal.userRoles && 
-                   validAuthData.clientPrincipal.userRoles.includes('authenticated');
+    const isValid = isAuthValid(validAuthData);
 
     expect(isValid).toBe(true);
 
@@ -56,10 +51,7 @@ describe('Authentication Header Generation', () => {
       clientPrincipal: null
     };
 
-    const isValid1 = invalidAuthData1.clientPrincipal && 
-                    invalidAuthData1.clientPrincipal.userDetails && 
-                    invalidAuthData1.clientPrincipal.userRoles && 
-                    invalidAuthData1.clientPrincipal.userRoles.includes('authenticated');
+    const isValid1 = isAuthValid(invalidAuthData1);
 
     expect(isValid1).toBeFalsy();
 
@@ -117,13 +109,11 @@ describe('Authentication Header Generation', () => {
 
     // Simulate the authentication logic from the App component
     let authToken = null;
-    
-    if (mockAuthData.clientPrincipal && 
-        mockAuthData.clientPrincipal.userDetails && 
-        mockAuthData.clientPrincipal.userRoles && 
-        mockAuthData.clientPrincipal.userRoles.includes('authenticated')) {
-      // This is the actual logic from the App component using btoa
-      authToken = btoa(JSON.stringify(mockAuthData.clientPrincipal));
+    {
+      if (isAuthValid(mockAuthData)) {
+        // This is the actual logic from the App component using btoa
+        authToken = btoa(JSON.stringify(mockAuthData.clientPrincipal));
+      }
     }
 
     // Verify token was generated
@@ -176,10 +166,7 @@ describe('Authentication Header Generation', () => {
     let authToken = null;
     
     // First call: valid auth
-    if (mockAuthData.clientPrincipal && 
-        mockAuthData.clientPrincipal.userDetails && 
-        mockAuthData.clientPrincipal.userRoles && 
-        mockAuthData.clientPrincipal.userRoles.includes('authenticated')) {
+    if (isAuthValid(mockAuthData)) {
       authToken = btoa(JSON.stringify(mockAuthData.clientPrincipal));
     }
 
@@ -187,10 +174,18 @@ describe('Authentication Header Generation', () => {
 
     // Second call: expired auth
     authToken = null;
-    if (mockAuthDataExpired.clientPrincipal && 
-        mockAuthDataExpired.clientPrincipal.userDetails && 
-        mockAuthDataExpired.clientPrincipal.userRoles && 
-        mockAuthDataExpired.clientPrincipal.userRoles.includes('authenticated')) {
+    if (isAuthValid(mockAuthDataExpired)) {
+      authToken = btoa(JSON.stringify(mockAuthDataExpired.clientPrincipal));
+    }
+
+    expect(authToken).toBeFalsy();
+
+    if (isAuthValid(mockAuthDataExpired)) {
+    }
+
+    expect(authToken).toBeFalsy();
+
+    if (isAuthValid(mockAuthDataExpired)) {
       authToken = btoa(JSON.stringify(mockAuthDataExpired.clientPrincipal));
     }
 
@@ -204,7 +199,6 @@ describe('Authentication Header Generation', () => {
 
     const headersWithoutAuth = {
       'Content-Type': 'application/json',
-      ...(null && { 'X-User-Token': null }),
     };
 
     expect(headersWithAuth).toHaveProperty('X-User-Token');

@@ -13,6 +13,25 @@ interface UserInfo {
   identityProvider: string;
 }
 
+function isAuthValid(authData: any): boolean {
+  if (!authData.clientPrincipal) {
+    console.log('No clientPrincipal found');
+    return false;
+  } else if (!authData.clientPrincipal.userDetails) {
+    console.log('No userDetails found');
+    return false;
+  } else if (!authData.clientPrincipal.userRoles) {
+    console.log('No userRoles found');
+    return false;
+  } else if (!authData.clientPrincipal.userRoles.includes('authenticated')) {
+    console.log('User not authenticated');
+    return false;
+  } else {
+    return true;
+  }
+}
+export { isAuthValid };
+
 function App() {
   const [affirmation, setAffirmation] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -75,17 +94,7 @@ function App() {
           const authData = await authResponse.json();
           console.log('Auth data:', authData);
           
-          // The auth data structure has clientPrincipal nested inside
-          
-          if (!authData.clientPrincipal){
-            console.log('No clientPrincipal found');
-          } else if (!authData.clientPrincipal.userDetails) {
-            console.log('No userDetails found');
-          } else if (!authData.clientPrincipal.userRoles) {
-            console.log('No userRoles found');
-          } else if (!authData.clientPrincipal.userRoles.includes('authenticated')) {
-            console.log('User not authenticated');
-          } else {
+          if (isAuthValid(authData)) {
             // Encode the user info to send to external function (browser-safe)
             authToken = btoa(JSON.stringify(authData.clientPrincipal));
             console.log('Generated auth token:', authToken);
@@ -93,9 +102,8 @@ function App() {
             
             // Update UI state to match current auth status
             setUser(authData.clientPrincipal);
-          } 
-          if (!authToken) {
-            console.log('Auth failed');
+          } else {
+            console.log('Auth failed:');
             // Clear user state when auth fails
             setUser(null);
           }
