@@ -3,6 +3,7 @@ import { randomInt } from "crypto";
 import { MongoClient } from "mongodb";
 import { VERSION } from "./shared/version";
 import { parseAuthenticatedUserFromHeaders, getAuthHeadersPresence } from "./shared/auth";
+import { buildCorsHeaders } from "./shared/cors";
 
 // Validate required environment variables
 function getEnvVar(name: string): string {
@@ -62,14 +63,10 @@ async function ensureConn() {
 export async function getRandomLine(req: HttpRequest, ctx: InvocationContext): Promise<HttpResponseInit> {
     // Handle CORS preflight requests
     if (req.method === 'OPTIONS') {
+        const origin = (req.headers as any).get ? (req.headers as any).get('origin') : (req.headers as any)['origin'];
         return {
             status: 200,
-            headers: {
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type, Authorization, X-User-Token",
-                "Access-Control-Max-Age": "86400"
-            }
+            headers: buildCorsHeaders(origin, true, ["Content-Type", "Authorization", "X-User-Token"])
         };
     }
 
@@ -83,13 +80,12 @@ export async function getRandomLine(req: HttpRequest, ctx: InvocationContext): P
     if (!user) {
         ctx.log('No valid authentication found');
         const presence = getAuthHeadersPresence(req.headers as any);
+        const origin = (req.headers as any).get ? (req.headers as any).get('origin') : (req.headers as any)['origin'];
         return {
             status: 401,
-            headers: {
+            headers: { 
                 "Content-Type": "application/json",
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "GET, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type, Authorization, X-User-Token"
+                ...buildCorsHeaders(origin, true, ["Content-Type", "Authorization", "X-User-Token"])
             },
             jsonBody: { 
                 error: "Unauthorized - Please log in", 
@@ -127,13 +123,12 @@ export async function getRandomLine(req: HttpRequest, ctx: InvocationContext): P
             };
         }
 
+        const origin = (req.headers as any).get ? (req.headers as any).get('origin') : (req.headers as any)['origin'];
         return { 
             status: 200, 
             headers: {
                 "Content-Type": "application/json",
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "GET, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type"
+                ...buildCorsHeaders(origin, true, ["Content-Type", "Authorization", "X-User-Token"])
             },
             jsonBody: { line: doc.text, version: VERSION } 
         };
