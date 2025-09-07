@@ -24,13 +24,12 @@ export async function testDate(request: HttpRequest, context: InvocationContext)
         version: VERSION
     };
 
+    const origin = (request.headers as any).get ? (request.headers as any).get('origin') : (request.headers as any)['origin'];
     return {
         status: 200,
         headers: {
             "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type"
+            ...buildCorsHeaders(origin, false, ["Content-Type"])
         },
         jsonBody: responseMessage
     };

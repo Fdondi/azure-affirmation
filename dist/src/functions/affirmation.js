@@ -34,14 +34,10 @@ function testDate(request, context) {
             timestamp: new Date().toISOString(),
             version: version_1.VERSION
         };
+        const origin = request.headers.get ? request.headers.get('origin') : request.headers['origin'];
         return {
             status: 200,
-            headers: {
-                "Content-Type": "application/json",
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type"
-            },
+            headers: Object.assign({ "Content-Type": "application/json" }, (0, cors_1.buildCorsHeaders)(origin, false, ["Content-Type"])),
             jsonBody: responseMessage
         };
     });

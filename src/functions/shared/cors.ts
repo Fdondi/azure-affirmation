@@ -20,11 +20,25 @@ export function buildCorsHeaders(requestOrigin: string | null, includeCredential
     };
 
     const allowOrigin = resolveAllowedOrigin(requestOrigin);
-    if (allowOrigin) {
-        headers['Access-Control-Allow-Origin'] = allowOrigin;
-        if (includeCredentials) headers['Access-Control-Allow-Credentials'] = 'true';
+    
+    if (includeCredentials) {
+        // When credentials are included, we must use a specific origin, not '*'
+        if (allowOrigin) {
+            headers['Access-Control-Allow-Origin'] = allowOrigin;
+            headers['Access-Control-Allow-Credentials'] = 'true';
+        } else {
+            // If no allowed origin and credentials are required, use the request origin
+            // This allows the request to proceed but may be restricted by browser
+            headers['Access-Control-Allow-Origin'] = requestOrigin || '*';
+            headers['Access-Control-Allow-Credentials'] = 'true';
+        }
     } else {
-        headers['Access-Control-Allow-Origin'] = '*';
+        // When no credentials, we can use wildcard
+        if (allowOrigin) {
+            headers['Access-Control-Allow-Origin'] = allowOrigin;
+        } else {
+            headers['Access-Control-Allow-Origin'] = '*';
+        }
     }
 
     if (allowHeaders.length > 0) {
