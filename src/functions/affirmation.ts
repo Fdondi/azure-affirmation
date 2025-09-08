@@ -5,15 +5,6 @@ import { VERSION } from "./shared/version";
 import { parseAuthenticatedUserFromHeaders, getAuthHeadersPresence } from "./shared/auth";
 import { buildCorsHeaders } from "./shared/cors";
 
-// Validate required environment variables
-function getEnvVar(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-  return value;
-}
-
 export async function testDate(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
     context.log('HTTP trigger function processed a request.');
 
@@ -60,14 +51,7 @@ async function ensureConn() {
 }
 
 export async function getRandomLine(req: HttpRequest, ctx: InvocationContext): Promise<HttpResponseInit> {
-    // Handle CORS preflight requests
-    if (req.method === 'OPTIONS') {
-        const origin = (req.headers as any).get ? (req.headers as any).get('origin') : (req.headers as any)['origin'];
-        return {
-            status: 200,
-            headers: buildCorsHeaders(origin, true, ["Content-Type", "Authorization", "X-User-Token"])
-        };
-    }
+    // Note: CORS preflight is handled by Azure! 
 
     // Log request basics for debugging
     ctx.log('Request method:', req.method);
