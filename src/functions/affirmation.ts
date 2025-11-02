@@ -51,7 +51,7 @@ async function ensureConn() {
 }
 
 export async function getRandomLine(req: HttpRequest, ctx: InvocationContext): Promise<HttpResponseInit> {
-    // Note: CORS preflight is handled by Azure! 
+    // Note: CORS preflight is handled by Azure!
 
     // Log request basics for debugging
     ctx.log('Request method:', req.method);

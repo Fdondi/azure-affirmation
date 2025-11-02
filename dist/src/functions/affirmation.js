@@ -17,14 +17,6 @@ const mongodb_1 = require("mongodb");
 const version_1 = require("./shared/version");
 const auth_1 = require("./shared/auth");
 const cors_1 = require("./shared/cors");
-// Validate required environment variables
-function getEnvVar(name) {
-    const value = process.env[name];
-    if (!value) {
-        throw new Error(`Missing required environment variable: ${name}`);
-    }
-    return value;
-}
 function testDate(request, context) {
     return __awaiter(this, void 0, void 0, function* () {
         context.log('HTTP trigger function processed a request.');
@@ -68,14 +60,7 @@ function ensureConn() {
 }
 function getRandomLine(req, ctx) {
     return __awaiter(this, void 0, void 0, function* () {
-        // Handle CORS preflight requests
-        if (req.method === 'OPTIONS') {
-            const origin = req.headers.get ? req.headers.get('origin') : req.headers['origin'];
-            return {
-                status: 200,
-                headers: (0, cors_1.buildCorsHeaders)(origin, true, ["Content-Type", "Authorization", "X-User-Token"])
-            };
-        }
+        // Note: CORS preflight is handled by Azure!
         // Log request basics for debugging
         ctx.log('Request method:', req.method);
         ctx.log('Request URL:', req.url);
